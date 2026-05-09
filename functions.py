@@ -49,10 +49,10 @@ def rmse(y, y_pred):
 
     erro_percentual_medio = (rmse/y_media)*100
 
-    {
+    valores_encontrados = {
         "RMSE" : rmse,
         "MSE" : mse,
         "Erro Percentual Médio" : rmse
     }
 
-    return rmse, mse, erro_percentual_medio
+    return valores_encontrados
