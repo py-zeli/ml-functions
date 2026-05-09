@@ -25,15 +25,17 @@ def minimos_quadrados(x: list,y: list):
 
     return coef_angular, coef_linear
 
-def realizar_previsao(x, coef_linear, coef_angular):
+def realizar_previsao(x, coef_angular, coef_linear):
 
-    y_pred = [(coef_linear * xi) + coef_angular for xi in x]
+    y_pred = [(coef_angular * xi) + coef_linear for xi in x]
 
     return y_pred
 
-def raiz_soma_erros_quadrados(y, y_pred):
+def rmse(y, y_pred):
 
     n_y = len(y)
+
+    y_media = sum(y)/n_y
         
     y_erro = [yi - y_pred_i for yi, y_pred_i in zip(y, y_pred) ]
 
@@ -45,4 +47,12 @@ def raiz_soma_erros_quadrados(y, y_pred):
 
     rmse = mse ** (1/2)
 
-    return rmse, mse
+    erro_percentual_medio = (rmse/y_media)*100
+
+    {
+        "RMSE" : rmse,
+        "MSE" : mse,
+        "Erro Percentual Médio" : rmse
+    }
+
+    return rmse, mse, erro_percentual_medio
