@@ -61,13 +61,13 @@ def rmse(y, y_pred):
 
     return valores_encontrados
 
-def gradient_descent(x, y, taxa_de_aprendizado):
+def gradient_descent(x, y, taxa_de_aprendizado, coef_linear = 0, coef_angular = 0):
 
     tamanho_vetor = len(x)
 
-    coef_linear = [0] * tamanho_vetor
+    coef_linear = [coef_linear] * tamanho_vetor
 
-    coef_angular = [0] * tamanho_vetor
+    coef_angular = [coef_angular] * tamanho_vetor
 
     y_pred = [coef_angular * xi + coef_linear for coef_angular, xi, coef_linear in zip(coef_angular, x, coef_linear)]
 
@@ -79,9 +79,9 @@ def gradient_descent(x, y, taxa_de_aprendizado):
 
     soma_prod_erro_xi = sum(prod_erro_xi)
 
-    gradiente_coef_linear = (-2 / tamanho_vetor) * soma_prod_erro_xi
+    gradiente_coef_angular = (-2 / tamanho_vetor) * soma_prod_erro_xi
 
-    gradiente_coef_angular = (-2 / tamanho_vetor) * soma_erro
+    gradiente_coef_linear = (-2 / tamanho_vetor) * soma_erro
 
     novo_coef_linear = coef_linear[0] - (taxa_de_aprendizado * gradiente_coef_linear)
 
@@ -89,8 +89,8 @@ def gradient_descent(x, y, taxa_de_aprendizado):
 
     valores = {
         "antigo_coef_linear": coef_linear[0],
-        "antigo_coef_angular": coef_angular[0],
         "novo_coef_linear": novo_coef_linear,
+        "antigo_coef_angular": coef_angular[0],
         "novo_coef_angular": novo_coef_angular
     }
 
