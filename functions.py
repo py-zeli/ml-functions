@@ -11,9 +11,7 @@ def minimos_quadrados(x: list,y: list):
 
     x_dif_quadrado = [(xi ** 2) for xi in x_diferenca_media]
 
-    soma_x_dif_quadrado = sum(x_dif_quadrado)   
-    
-    y_dif_quadrado = [(yi ** 2) for yi in y_diferenca_media]
+    soma_x_dif_quadrado = sum(x_dif_quadrado)
     
     produto_dif_xy = [x_dif_i * y_dif_i for x_dif_i, y_dif_i in zip(x_diferenca_media, y_diferenca_media)]
 
@@ -30,6 +28,12 @@ def realizar_previsao(x, coef_angular, coef_linear):
     y_pred = [(coef_angular * xi) + coef_linear for xi in x]
 
     return y_pred
+
+def calcular_erro(y, y_pred):
+        
+    y_erro = [yi - y_pred_i for yi, y_pred_i in zip(y, y_pred) ]
+
+    return y_erro
 
 def rmse(y, y_pred):
 
@@ -56,3 +60,38 @@ def rmse(y, y_pred):
     }
 
     return valores_encontrados
+
+def gradient_descent(x, y, taxa_de_aprendizado):
+
+    tamanho_vetor = len(x)
+
+    coef_linear = [0] * tamanho_vetor
+
+    coef_angular = [0] * tamanho_vetor
+
+    y_pred = [coef_angular * xi + coef_linear for coef_angular, xi, coef_linear in zip(coef_angular, x, coef_linear)]
+
+    y_erro = calcular_erro(y, y_pred)
+
+    soma_erro = sum(y_erro)
+
+    prod_erro_xi = [y_erro_i * xi for y_erro_i, xi in zip(y_erro, x)]
+
+    soma_prod_erro_xi = sum(prod_erro_xi)
+
+    gradiente_coef_linear = (-2 / tamanho_vetor) * soma_prod_erro_xi
+
+    gradiente_coef_angular = (-2 / tamanho_vetor) * soma_erro
+
+    novo_coef_linear = coef_linear[0] - (taxa_de_aprendizado * gradiente_coef_linear)
+
+    novo_coef_angular = coef_angular[0] - (taxa_de_aprendizado * gradiente_coef_angular)
+
+    valores = {
+        "antigo_coef_linear": coef_linear[0],
+        "antigo_coef_angular": coef_angular[0],
+        "novo_coef_linear": novo_coef_linear,
+        "novo_coef_angular": novo_coef_angular
+    }
+
+    return valores
