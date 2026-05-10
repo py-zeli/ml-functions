@@ -120,15 +120,12 @@ def transpor_matriz(matriz):
     
     try:
 
-        for j in j_tamanho: # range(0,2)
+        for j in j_tamanho: 
                 
-            for i in i_tamanho: # range(0,5)
+            for i in i_tamanho:
 
                 while len(matriz_transposta) < j_tamanho[-1]+1:
                     matriz_transposta.append([])
-                
-                # while len(matriz_transposta[j]) < j_tamanho[-1]-4:
-                #     matriz_transposta[j].append(None)
 
                 matriz_transposta[j].insert(i,matriz[i][j])
                 
@@ -143,29 +140,16 @@ def transpor_matriz(matriz):
         print(f"TimeOut!\nCoordenada da falha: {i,j}")
         print(f"Tamanho:\n {len(matriz_transposta[j])}")
         print(f"Resultado até aqui:\n {dimensionar_matriz(matriz_transposta)}")
-        # print(f"Resultado até aqui:\n {matriz_transposta}")
-
-
-
-    # for i in i_tamanho:
-    #     print(matriz[j_tamanho[-1]][i])
-
-    # matriz_transposta = [matriz[j][i] for matriz[i][j] in matriz]
 
 def multiplicar_matrizes(matriz1, matriz2):
 
-    if len(matriz1) == len(matriz2):
-        return "O número de colunas da matriz1 deve igual ao número de linhas da matriz2!"
+    if len(matriz1) != len(matriz2):
+        return "O número de colunas da matriz1 deve ser igual ao número de linhas da matriz2!"
 
     matriz_produto = []
 
     i_m1_range, j_m1_range = dimensionar_matriz(matriz1)
     i_m2_range, j_m2_range = dimensionar_matriz(matriz2)
-
-    # print(i_m1_range)
-    # print(j_m1_range)
-    # print(i_m2_range)
-    # print(j_m2_range)
 
     try:
         for im1 in i_m1_range:
@@ -186,13 +170,6 @@ def multiplicar_matrizes(matriz1, matriz2):
 
                     produtos.append(fator1 * fator2)
 
-                    # print(f"{fator1}x{fator2}={fator1 * fator2}")
-
-                    # matriz_produto[im1].insert(matriz1[im1][j_m1] * matriz2[j_m2][im2],matriz1[im1][j_m2])
-                    # print()
-                
-                # print(produtos)
-
                 matriz_produto[j_m2].insert(im2,sum(produtos))
 
     except IndexError:
@@ -206,3 +183,41 @@ def multiplicar_matrizes(matriz1, matriz2):
         # print(f"Resultado até aqui:\n {matriz_transposta}")
 
     print(f"Matriz produto: {matriz_produto}")
+
+def multiplicar_matriz_vetor(matriz, vetor):
+    print("Iniciando")
+    
+    if len(matriz[0]) == len(vetor):
+        return "O número de colunas da matriz1 deve igual ao número de linhas da matriz2!"
+
+    i_matriz, j_matriz = dimensionar_matriz(matriz)
+    j_vetor = len(vetor)
+
+    matriz_produto = [[] for jm in j_matriz]
+
+    print(f"Matriz inserida: {matriz}")
+    print(f"Vetor inserido: {vetor}")
+
+    print(f"Esqueleto da Matriz Produto: {matriz_produto}\n\n")
+
+
+    for jm in j_matriz:
+
+        produtos = []
+
+        for im, jv in zip(i_matriz, vetor):
+
+            print(f"{matriz[im][jm]}x{jv}")
+            print(f"Coodernadas Matriz: {im},{jm}")
+            print(f"Coodernadas Vetor: {jv}")
+
+            produtos.append(matriz[im][jm] * jv)
+
+            print(produtos)
+            print()
+
+        matriz_produto[jm].insert(im,sum(produtos))
+
+
+    
+    print(matriz_produto)
