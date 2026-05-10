@@ -1,3 +1,4 @@
+"""REGRESSÃO LINEAR SIMPLES"""
 def media(vetor):
     return sum(vetor)/len(vetor)
 
@@ -95,3 +96,58 @@ def gradient_descent(x, y, taxa_de_aprendizado, coef_linear = 0, coef_angular = 
     }
 
     return valores
+
+
+"""REGRESSÃO LINEAR MÚLTIPLA (POLINOMIAL)"""
+
+def criar_matriz(*args):
+    matriz = [vetor for vetor in args]
+    return matriz
+
+def dimensionar_matriz(matriz):
+
+    i_tamanho = range(len(matriz))
+
+    j_tamanho = range(len(matriz[0]))
+
+    return i_tamanho, j_tamanho
+
+def transpor_matriz(matriz):
+
+    matriz_transposta=[]
+
+    i_tamanho, j_tamanho = dimensionar_matriz(matriz)
+    
+    try:
+
+        for j in j_tamanho: # range(0,2)
+                
+            for i in i_tamanho: # range(0,5)
+
+                while len(matriz_transposta) < j_tamanho[-1]+1:
+                    matriz_transposta.append([])
+                
+                # while len(matriz_transposta[j]) < j_tamanho[-1]-4:
+                #     matriz_transposta[j].append(None)
+
+                matriz_transposta[j].insert(i,matriz[i][j])
+                
+        return matriz_transposta
+
+    except IndexError:
+        print(f"\nDeu erro!\nCoordenada da falha: {i,j}")
+        print(f"Resultado até aqui:\n {matriz_transposta}")
+
+    
+    except KeyboardInterrupt:
+        print(f"TimeOut!\nCoordenada da falha: {i,j}")
+        print(f"Tamanho:\n {len(matriz_transposta[j])}")
+        print(f"Resultado até aqui:\n {dimensionar_matriz(matriz_transposta)}")
+        # print(f"Resultado até aqui:\n {matriz_transposta}")
+
+
+
+    # for i in i_tamanho:
+    #     print(matriz[j_tamanho[-1]][i])
+
+    # matriz_transposta = [matriz[j][i] for matriz[i][j] in matriz]

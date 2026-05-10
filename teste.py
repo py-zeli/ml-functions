@@ -1,16 +1,16 @@
-import functions
+import functions_test
 
 x = [2, 3, 5, 7, 8]
 y = [5, 7, 8, 10, 12]
 
-coef_angular, coef_linear = functions.minimos_quadrados(x,y)
+coef_angular, coef_linear = functions_test.minimos_quadrados(x,y)
 
-y_pred = functions.realizar_previsao(x, coef_angular, coef_linear)
+y_pred = functions_test.realizar_previsao(x, coef_angular, coef_linear)
 
 print(f"Coeficiente Linear: {coef_linear}\nCoeficiente Angular: {coef_angular}\n")
 
 
-print(functions.rmse(y, y_pred))
+print(functions_test.rmse(y, y_pred))
 
 # print(functions.gradient_descent(x, y, 0.01))
 
