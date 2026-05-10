@@ -151,3 +151,58 @@ def transpor_matriz(matriz):
     #     print(matriz[j_tamanho[-1]][i])
 
     # matriz_transposta = [matriz[j][i] for matriz[i][j] in matriz]
+
+def multiplicar_matrizes(matriz1, matriz2):
+
+    if len(matriz1) == len(matriz2):
+        return "O número de colunas da matriz1 deve igual ao número de linhas da matriz2!"
+
+    matriz_produto = []
+
+    i_m1_range, j_m1_range = dimensionar_matriz(matriz1)
+    i_m2_range, j_m2_range = dimensionar_matriz(matriz2)
+
+    # print(i_m1_range)
+    # print(j_m1_range)
+    # print(i_m2_range)
+    # print(j_m2_range)
+
+    try:
+        for im1 in i_m1_range:
+
+            for j_m2 in j_m2_range:
+
+                produtos = []
+
+                for j_m1, im2 in zip(j_m1_range, i_m2_range):
+
+                    while len(matriz_produto) < j_m2_range[-1]+1:
+                        matriz_produto.append([])
+
+                    
+                    fator1 = matriz1[im1][j_m1]
+                    fator2 = matriz2[im2][j_m2]
+
+
+                    produtos.append(fator1 * fator2)
+
+                    # print(f"{fator1}x{fator2}={fator1 * fator2}")
+
+                    # matriz_produto[im1].insert(matriz1[im1][j_m1] * matriz2[j_m2][im2],matriz1[im1][j_m2])
+                    # print()
+                
+                # print(produtos)
+
+                matriz_produto[j_m2].insert(im2,sum(produtos))
+
+    except IndexError:
+        print(f"\nDeu erro!\nCoordenada da falha: {im1,j_m1}")
+        print(f"Resultado até aqui:\n {matriz_produto}")
+
+    except KeyboardInterrupt:
+        print(f"TimeOut!\nCoordenada da falha: {im1, j_m1}")
+        print(f"Tamanho:\n {len(matriz_produto[j_m1])}")
+        print(f"Resultado até aqui:\n {dimensionar_matriz(matriz_produto)}")
+        # print(f"Resultado até aqui:\n {matriz_transposta}")
+
+    print(f"Matriz produto: {matriz_produto}")
