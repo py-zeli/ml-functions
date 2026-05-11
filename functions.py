@@ -143,7 +143,7 @@ def transpor_matriz(matriz):
 
 def multiplicar_matrizes(matriz1, matriz2):
 
-    if len(matriz1) != len(matriz2):
+    if len(matriz1) == len(matriz2):
         return "O número de colunas da matriz1 deve ser igual ao número de linhas da matriz2!"
 
     matriz_produto = []
@@ -184,40 +184,130 @@ def multiplicar_matrizes(matriz1, matriz2):
 
     print(f"Matriz produto: {matriz_produto}")
 
+    return matriz_produto
+
 def multiplicar_matriz_vetor(matriz, vetor):
-    print("Iniciando")
+    # O sinal de != (diferente) libera a passagem quando os tamanhos são iguais
+    if len(matriz[0]) != len(vetor):
+        return "O número de colunas da matriz1 deve ser igual ao número de linhas da matriz2!"
+
+    resultado = []
+    for linha in matriz:
+        soma = sum(a * b for a, b in zip(linha, vetor))
+        resultado.append(soma)
+        
+    return resultado
+
+def diagonal_matriz(matriz):
+
+    diagonal = [[],[]]
+
+    tamanho_i, tamanho_j = dimensionar_matriz(matriz)
     
-    if len(matriz[0]) == len(vetor):
-        return "O número de colunas da matriz1 deve igual ao número de linhas da matriz2!"
+    for coordenada_diagonal in range(min(tamanho_i[-1], tamanho_j[-1])+1):
+        
+        diagonal[0].append(coordenada_diagonal)
+        diagonal[1].append(coordenada_diagonal)       
 
-    i_matriz, j_matriz = dimensionar_matriz(matriz)
-    j_vetor = len(vetor)
+    return diagonal 
 
-    matriz_produto = [[] for jm in j_matriz]
-
-    print(f"Matriz inserida: {matriz}")
-    print(f"Vetor inserido: {vetor}")
-
-    print(f"Esqueleto da Matriz Produto: {matriz_produto}\n\n")
-
-
-    for jm in j_matriz:
-
-        produtos = []
-
-        for im, jv in zip(i_matriz, vetor):
-
-            print(f"{matriz[im][jm]}x{jv}")
-            print(f"Coodernadas Matriz: {im},{jm}")
-            print(f"Coodernadas Vetor: {jv}")
-
-            produtos.append(matriz[im][jm] * jv)
-
-            print(produtos)
-            print()
-
-        matriz_produto[jm].insert(im,sum(produtos))
-
-
+def transformar_em_triangular(matriz):
+    # n aqui representa o número de variáveis (colunas)
+    n_colunas = len(matriz) 
     
-    print(matriz_produto)
+    # Criamos a cópia mantendo sua estrutura de colunas
+    A = [[float(x) for x in coluna] for coluna in matriz]
+    
+    # n_linhas é o número de observações em cada coluna
+    n_linhas = len(A[0])
+
+    # O escalonamento deve ser feito sobre as observações (linhas)
+    for j in range(n_colunas):
+        # O pivô está na coluna j, linha j
+        pivo = A[j][j]
+        
+        if pivo == 0:
+            continue
+
+        for i in range(j + 1, n_linhas):
+            # O fator busca zerar o elemento na linha i usando a linha j
+            # Na sua estrutura: A[coluna][linha]
+            fator = A[j][i] / pivo
+            
+            # Atualiza todas as colunas para aquela linha i
+            for k in range(j, n_colunas):
+                A[k][i] -= fator * A[k][j]
+                
+    return A
+
+def multiplicar_diagonal(matriz_diagonal):
+
+    coordenadas_diagonal = diagonal_matriz(matriz_diagonal)
+
+    soma = [1]
+
+    for coluna, linha in zip(coordenadas_diagonal[0],coordenadas_diagonal[1]):
+        
+        soma[0] = (soma[0] * matriz_diagonal[coluna][linha])
+
+    return soma[0]
+
+def determinante_2x2(matriz_menor):
+    """Calcula o determinante de uma matriz 2x2: (a*d) - (b*c)"""
+    a = matriz_menor[0][0]
+    b = matriz_menor[0][1]
+    c = matriz_menor[1][0]
+    d = matriz_menor[1][1]
+    return (a * d) - (b * c)
+
+def matriz_cofatores(matriz):
+    """Recorta a matriz 3x3, calcula os menores e aplica a regra de sinal"""
+    n = len(matriz)
+    cofatores = []
+    
+    for i in range(n):
+        linha_cofatores = []
+        
+        for j in range(n):
+            # 1. O Recorte (O "esconde-esconde")
+            submatriz = []
+            for linha_idx in range(n):
+                # Se a linha atual não for a linha que queremos esconder (i)
+                if linha_idx != i:
+                    # Usamos slicing para pegar tudo antes da coluna 'j' e tudo depois da coluna 'j'
+                    nova_linha = matriz[linha_idx][:j] + matriz[linha_idx][j+1:]
+                    submatriz.append(nova_linha)
+            
+            # 2. Calcular o determinante da 2x2 que sobrou
+            menor = determinante_2x2(submatriz)
+            
+            # 3. Regra do Tabuleiro de Xadrez (Sinal)
+            # Se (i + j) for par, (-1) elevado a par é positivo (1)
+            # Se (i + j) for ímpar, (-1) elevado a ímpar é negativo (-1)
+            sinal = (-1) ** (i + j)
+            cofator = sinal * menor
+            
+            # Guarda o resultado na nova linha
+            linha_cofatores.append(cofator)
+            
+        # Guarda a linha completa na matriz de cofatores
+        cofatores.append(linha_cofatores)
+        
+    return cofatores
+
+def matriz_adjunta(matriz):
+    """A matriz adjunta é simplesmente a transposta da matriz de cofatores"""
+    cofatores = matriz_cofatores(matriz)
+    
+    # Reaproveitando a função que você já tem no functions.py!
+    adjunta = transpor_matriz(cofatores) 
+    
+    return adjunta
+
+def primeiro_fator(determinante, matriz_adjunta):
+    det_inverso = (1/determinante)
+
+    primeiro_fator = [[det_inverso * elemento for elemento in linha] for linha in matriz_adjunta]
+
+    return primeiro_fator
+
