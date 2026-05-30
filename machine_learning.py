@@ -1,5 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+Biblioteca Local de Machine Learning (machine_learning.py)
+-----------------------------------------------------------
+Esta biblioteca agrupa os modelos preditivos e algoritmos de ajuste (OLS, GD),
+delegando primitivas estatísticas e matriciais para o módulo 'algebra.py'.
+"""
+
 import algebra as alg
 
+# Alias de conveniência para compatibilidade com os scripts de teste
+criar_matriz = alg.criar_matriz
+
+# --- MODELO 1: REGRESSÃO LINEAR SIMPLES ---
 
 class RegressaoLinear:
     """Modelo de Regressão Linear Simples."""
@@ -7,19 +19,21 @@ class RegressaoLinear:
         self.coef_angular = None
         self.coef_linear = None
 
-    def fit(self, x: list, y: list, method="ols", taxa_aprendizado=0.01, epocas=5000):
+    def fit(self, x: list[float], y: list[float], metodo="mqo", taxa_aprendizado=0.01, epocas=5000):
         """
         Ajusta o modelo calibrando os coeficientes.
         Métodos:
-        - 'ols': Mínimos Quadrados Ordinários (analítico).
-        - 'gd' ou 'gradient_descent': Gradiente Descendente (iterativo).
+        - 'mqo': Mínimos Quadrados Ordinários (analítico).
+        - 'gd' ou 'descendente': Gradiente Descendente (iterativo).
         """
+        # Validação de Vetores
         if len(x) != len(y):
             raise ValueError("Os vetores x e y devem ter o mesmo tamanho.")
-            
-        if method == "ols":
+
+        # Escolha do método de calibração
+        if metodo == "mqo":
             self.coef_angular, self.coef_linear = minimos_quadrados(x, y)
-        elif method in ("gd", "gradient_descent"):
+        elif metodo in ("gd", "descendente"):
             coef_l = 0.0
             coef_a = 0.0
             for _ in range(epocas):
@@ -29,331 +43,177 @@ class RegressaoLinear:
             self.coef_linear = coef_l
             self.coef_angular = coef_a
         else:
-            raise ValueError("Método desconhecido. Escolha entre 'ols' ou 'gd' (gradient_descent).")
+            raise ValueError("Método desconhecido. Escolha entre 'mqo' ou 'gd' (descendente).")
             
         return self
 
-    def predict(self, x: list) -> list:
+    def predict(self, x: list[float]) -> list[float]:
         """Gera previsões para novos dados de entrada."""
         if self.coef_angular is None or self.coef_linear is None:
             raise RuntimeError("O modelo precisa ser treinado com .fit() antes de prever.")
             
-        return [self.coef_angular * xi + self.coef_linear for xi in x]
+        return realizar_previsao(x, self.coef_angular, self.coef_linear)
 
-"""REGRESSÃO LINEAR SIMPLES"""
 
-def minimos_quadrados(x: list, y: list):
+# --- MODELO 2: REGRESSÃO LINEAR MÚLTIPLA ---
+
+class RegressaoLinearMultipla:
+    """Modelo de Regressão Linear Múltipla via Equação Normal matricial."""
+    def __init__(self):
+        self.coeficientes = None
+
+    def fit(self, X: list[list[float]], y: list[float]):
+        """
+        Ajusta o modelo resolvendo a Equação Normal matricial: beta = (X^T * X)^-1 * X^T * y.
+        X: Matriz de design na representação de lista de colunas (incluindo vetor de intercepto).
+        y: Vetor com a variável alvo.
+        """
+        # X é a matriz transposta de design na convenção usual
+        X_transposta = X
+        X_normal = alg.transpor_matriz(X_transposta)
+        
+        # 1. Covariância: X^T * X
+        XtX = alg.multiplicar_matrizes(X_transposta, X_normal)
+        
+        # 2. Resolução do determinante e adjunta para inversão
+        matriz_diagonal = alg.transformar_em_triangular(XtX)
+        determinante = alg.multiplicar_diagonal(matriz_diagonal)
+        
+        if determinante == 0:
+            raise ValueError("A matriz XtX não é invertível (determinante igual a zero).")
+            
+        adjunta = alg.matriz_adjunta(XtX)
+        inversa = alg.primeiro_fator(determinante, adjunta)
+        
+        # 3. Produto de X^T por y
+        Xt_y = alg.multiplicar_matriz_vetor(X_transposta, y)
+        
+        # 4. Cálculo final dos coeficientes (beta)
+        self.coeficientes = alg.multiplicar_matriz_vetor(inversa, Xt_y)
+        return self
+
+    def predict(self, X: list[list[float]]) -> list[float]:
+        """Gera previsões para novos dados de entrada na mesma representação matricial."""
+        if self.coeficientes is None:
+            raise RuntimeError("O modelo precisa ser treinado com .fit() antes de prever.")
+        
+        X_normal = alg.transpor_matriz(X)
+        return alg.multiplicar_matriz_vetor(X_normal, self.coeficientes)
+
+
+# --- FUNÇÕES DE AJUSTE E CÁLCULO ---
+
+def minimos_quadrados(x: list[float], y: list[float]) -> tuple[float, float]:
     """
-    Ajusta o modelo de Regressão Linear Simples.
+    Ajusta o modelo de Regressão Linear Simples via Mínimos Quadrados.
     Fórmula do Coeficiente Angular: Covariância(X, Y) / Variância(X)
     Fórmula do Coeficiente Linear: média(Y) - Coeficiente Angular * média(X)
     """
-    # Escalar
     x_media = alg.media(x)
-
-    # Escalar
     y_media = alg.media(y)
-
-    # Vetor
-    x_desvios = alg.desvio(x)
-
-    # Vetor
-    y_desvios = alg.desvio(y)
-
-    # Escalar
+    
+    # Desvios em relação à média (reutilizando a média calculada)
+    x_desvios = alg.desvio(x, x_media)
+    y_desvios = alg.desvio(y, y_media)
+    
+    # Inclinação da reta
     covariancia_xy = sum(alg.produto_vetor(x_desvios, y_desvios))
-
-    # Escalar
     variancia_x = sum(alg.vetor_expoente(x_desvios, 2))
-
-    # Escalar
+    
     coef_angular = covariancia_xy / variancia_x
-
-    # Escalar
     coef_linear = y_media - (coef_angular * x_media)
     
     return coef_angular, coef_linear
 
-def realizar_previsao(x, coef_angular, coef_linear):
 
-    y_pred = [(coef_angular * xi) + coef_linear for xi in x]
-
-    return y_pred
-
-def calcular_erro(y, y_pred):
-        
-    y_erro = [yi - y_pred_i for yi, y_pred_i in zip(y, y_pred) ]
-
-    return y_erro
-
-def rmse(y, y_pred):
-
-    n_y = len(y)
-
-    y_media = sum(y)/n_y
-        
-    y_erro = [yi - y_pred_i for yi, y_pred_i in zip(y, y_pred)]
-
-    y_erro_quadrado = [y_erro_i ** 2 for y_erro_i in y_erro]
-
-    soma_erros_quadrados = sum(y_erro_quadrado)
-
-    mse = soma_erros_quadrados/n_y
-
-    rmse = mse ** (1/2)
-
-    erro_percentual_medio = (rmse/y_media)*100
-
-    valores_encontrados = {
-        "RMSE" : rmse,
-        "MSE" : mse,
-        "Erro Percentual Médio" : rmse
-    }
-
-    return valores_encontrados
-
-def gradient_descent(x, y, taxa_de_aprendizado, coef_linear=0.0, coef_angular=0.0):
+def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float, coef_linear=0.0, coef_angular=0.0) -> dict[str, float]:
+    """Realiza uma única etapa do Gradiente Descendente para atualizar os pesos."""
     tamanho_vetor = len(x)
 
     # Previsão: y = ax + b
-    y_pred = [coef_angular * xi + coef_linear for xi in x]
+    y_pred = realizar_previsao(x, coef_angular, coef_linear)
 
+    # Cálculo dos erros e gradientes
     y_erro = calcular_erro(y, y_pred)
-
     soma_erro = sum(y_erro)
-
-    prod_erro_xi = [y_erro_i * xi for y_erro_i, xi in zip(y_erro, x)]
-
+    
+    # Primitiva de produto escalar elemento a elemento
+    prod_erro_xi = alg.produto_vetor(y_erro, x)
     soma_prod_erro_xi = sum(prod_erro_xi)
 
     gradiente_coef_angular = (-2 / tamanho_vetor) * soma_prod_erro_xi
-
     gradiente_coef_linear = (-2 / tamanho_vetor) * soma_erro
 
+    # Atualização dos coeficientes
     novo_coef_linear = coef_linear - (taxa_de_aprendizado * gradiente_coef_linear)
-
     novo_coef_angular = coef_angular - (taxa_de_aprendizado * gradiente_coef_angular)
 
-    valores = {
+    return {
         "antigo_coef_linear": coef_linear,
         "novo_coef_linear": novo_coef_linear,
         "antigo_coef_angular": coef_angular,
         "novo_coef_angular": novo_coef_angular
     }
 
-    return valores
+
+def realizar_previsao(x: list[float], coef_angular: float, coef_linear: float) -> list[float]:
+    """Gera previsões para regressão simples: y_pred = ax + b."""
+    return [(coef_angular * xi) + coef_linear for xi in x]
 
 
-"""REGRESSÃO LINEAR MÚLTIPLA (POLINOMIAL)"""
+def calcular_erro(y: list[float], y_pred: list[float]) -> list[float]:
+    """Calcula os resíduos simples entre o valor real e a previsão."""
+    return alg.subtrair_vetores(y, y_pred)
 
-def criar_matriz(*args):
-    matriz = [vetor for vetor in args]
-    return matriz
 
-def dimensionar_matriz(matriz):
+def rmse(y: list[float], y_pred: list[float]) -> dict[str, float]:
+    """Calcula métricas estatísticas de erro: RMSE, MSE e Erro Percentual Médio."""
+    n_y = len(y)
+    if n_y == 0:
+        raise ValueError("O vetor de dados não pode estar vazio.")
 
-    i_tamanho = range(len(matriz))
+    y_media = alg.media(y)
+    y_erro = calcular_erro(y, y_pred)
+    y_erro_quadrado = alg.vetor_expoente(y_erro, 2)
 
-    j_tamanho = range(len(matriz[0]))
+    mse = alg.media(y_erro_quadrado)
+    rmse_val = mse ** 0.5
+    erro_percentual_medio = (rmse_val / y_media) * 100 if y_media != 0 else 0.0
 
-    return i_tamanho, j_tamanho
+    return {
+        "RMSE": rmse_val,
+        "MSE": mse,
+        "Erro Percentual Médio": erro_percentual_medio
+    }
 
-def transpor_matriz(matriz):
 
-    matriz_transposta=[]
+# --- MODELO 3: REGRESSÃO LOGÍSTICA ---
 
-    i_tamanho, j_tamanho = dimensionar_matriz(matriz)
+def treinar_logistica(X: list[float], y: list[float], taxa_aprendizado: float, epocas: int) -> tuple[float, float]:
+    """
+    Treina o modelo de Regressão Logística do zero.
+    Corrige o peso e o bias via Gradiente Descendente.
+    """
+    peso = 0.0
+    bias = 0.0
+    tamanho_vetor = len(X)
     
-    try:
-
-        for j in j_tamanho: 
-                
-            for i in i_tamanho:
-
-                while len(matriz_transposta) < j_tamanho[-1]+1:
-                    matriz_transposta.append([])
-
-                matriz_transposta[j].insert(i,matriz[i][j])
-                
-        return matriz_transposta
-
-    except IndexError:
-        print(f"\nDeu erro!\nCoordenada da falha: {i,j}")
-        print(f"Resultado até aqui:\n {matriz_transposta}")
-
-    
-    except KeyboardInterrupt:
-        print(f"TimeOut!\nCoordenada da falha: {i,j}")
-        print(f"Tamanho:\n {len(matriz_transposta[j])}")
-        print(f"Resultado até aqui:\n {dimensionar_matriz(matriz_transposta)}")
-
-def multiplicar_matrizes(matriz1, matriz2):
-
-    if len(matriz1[0]) != len(matriz2):
-        raise ValueError("O número de colunas da matriz deve ser igual ao tamanho do vetor.")
-
-    matriz_produto = []
-
-    i_m1_range, j_m1_range = dimensionar_matriz(matriz1)
-    i_m2_range, j_m2_range = dimensionar_matriz(matriz2)
-
-    try:
-        for im1 in i_m1_range:
-
-            for j_m2 in j_m2_range:
-
-                produtos = []
-
-                for j_m1, im2 in zip(j_m1_range, i_m2_range):
-
-                    while len(matriz_produto) < j_m2_range[-1]+1:
-                        matriz_produto.append([])
-
-                    
-                    fator1 = matriz1[im1][j_m1]
-                    fator2 = matriz2[im2][j_m2]
-
-
-                    produtos.append(fator1 * fator2)
-
-                matriz_produto[j_m2].insert(im2,sum(produtos))
-
-    except IndexError:
-        print(f"\nDeu erro!\nCoordenada da falha: {im1,j_m1}")
-        print(f"Resultado até aqui:\n {matriz_produto}")
-
-    except KeyboardInterrupt:
-        print(f"TimeOut!\nCoordenada da falha: {im1, j_m1}")
-        print(f"Tamanho:\n {len(matriz_produto[j_m1])}")
-        print(f"Resultado até aqui:\n {dimensionar_matriz(matriz_produto)}")
-        # print(f"Resultado até aqui:\n {matriz_transposta}")
-
-    print(f"Matriz produto: {matriz_produto}")
-
-    return matriz_produto
-
-def multiplicar_matriz_vetor(matriz, vetor):
-    # O sinal de != (diferente) libera a passagem quando os tamanhos são iguais
-    if len(matriz[0]) != len(vetor):
-        return "O número de colunas da matriz1 deve ser igual ao número de linhas da matriz2!"
-
-    resultado = []
-    for linha in matriz:
-        soma = sum(a * b for a, b in zip(linha, vetor))
-        resultado.append(soma)
+    for _ in range(epocas):
+        soma_gradiente_peso = 0.0
+        soma_gradiente_bias = 0.0
         
-    return resultado
-
-def diagonal_matriz(matriz):
-
-    diagonal = [[],[]]
-
-    tamanho_i, tamanho_j = dimensionar_matriz(matriz)
-    
-    for coordenada_diagonal in range(min(tamanho_i[-1], tamanho_j[-1])+1):
-        
-        diagonal[0].append(coordenada_diagonal)
-        diagonal[1].append(coordenada_diagonal)       
-
-    return diagonal 
-
-def transformar_em_triangular(matriz):
-    # n aqui representa o número de variáveis (colunas)
-    n_colunas = len(matriz) 
-    
-    # Criamos a cópia mantendo sua estrutura de colunas
-    A = [[float(x) for x in coluna] for coluna in matriz]
-    
-    # n_linhas é o número de observações em cada coluna
-    n_linhas = len(A[0])
-
-    # O escalonamento deve ser feito sobre as observações (linhas)
-    for j in range(n_colunas):
-        # O pivô está na coluna j, linha j
-        pivo = A[j][j]
-        
-        if pivo == 0:
-            continue
-
-        for i in range(j + 1, n_linhas):
-            # O fator busca zerar o elemento na linha i usando a linha j
-            # Na sua estrutura: A[coluna][linha]
-            fator = A[j][i] / pivo
+        for xi, yi in zip(X, y):
+            y_predito = alg.predizer_probabilidade(xi, peso, bias)
+            erro = y_predito - yi
             
-            # Atualiza todas as colunas para aquela linha i
-            for k in range(j, n_colunas):
-                A[k][i] -= fator * A[k][j]
-                
-    return A
-
-def multiplicar_diagonal(matriz_diagonal):
-
-    coordenadas_diagonal = diagonal_matriz(matriz_diagonal)
-
-    soma = [1]
-
-    for coluna, linha in zip(coordenadas_diagonal[0],coordenadas_diagonal[1]):
+            soma_gradiente_peso += erro * xi
+            soma_gradiente_bias += erro
+            
+        gradiente_peso = soma_gradiente_peso / tamanho_vetor
+        gradiente_bias = soma_gradiente_bias / tamanho_vetor
         
-        soma[0] = (soma[0] * matriz_diagonal[coluna][linha])
-
-    return soma[0]
-
-def determinante_2x2(matriz_menor):
-    """Calcula o determinante de uma matriz 2x2: (a*d) - (b*c)"""
-    a = matriz_menor[0][0]
-    b = matriz_menor[0][1]
-    c = matriz_menor[1][0]
-    d = matriz_menor[1][1]
-    return (a * d) - (b * c)
-
-def matriz_cofatores(matriz):
-    """Recorta a matriz 3x3, calcula os menores e aplica a regra de sinal"""
-    n = len(matriz)
-    cofatores = []
-    
-    for i in range(n):
-        linha_cofatores = []
+        # Correção dos pesos
+        peso -= taxa_aprendizado * gradiente_peso
+        bias -= taxa_aprendizado * gradiente_bias
         
-        for j in range(n):
-            # 1. O Recorte (O "esconde-esconde")
-            submatriz = []
-            for linha_idx in range(n):
-                # Se a linha atual não for a linha que queremos esconder (i)
-                if linha_idx != i:
-                    # Usamos slicing para pegar tudo antes da coluna 'j' e tudo depois da coluna 'j'
-                    nova_linha = matriz[linha_idx][:j] + matriz[linha_idx][j+1:]
-                    submatriz.append(nova_linha)
-            
-            # 2. Calcular o determinante da 2x2 que sobrou
-            menor = determinante_2x2(submatriz)
-            
-            # 3. Regra do Tabuleiro de Xadrez (Sinal)
-            # Se (i + j) for par, (-1) elevado a par é positivo (1)
-            # Se (i + j) for ímpar, (-1) elevado a ímpar é negativo (-1)
-            sinal = (-1) ** (i + j)
-            cofator = sinal * menor
-            
-            # Guarda o resultado na nova linha
-            linha_cofatores.append(cofator)
-            
-        # Guarda a linha completa na matriz de cofatores
-        cofatores.append(linha_cofatores)
-        
-    return cofatores
-
-def matriz_adjunta(matriz):
-    """A matriz adjunta é simplesmente a transposta da matriz de cofatores"""
-    cofatores = matriz_cofatores(matriz)
-    
-    # Reaproveitando a função que você já tem no functions.py!
-    adjunta = transpor_matriz(cofatores) 
-    
-    return adjunta
-
-def primeiro_fator(determinante, matriz_adjunta):
-    det_inverso = (1/determinante)
-
-    primeiro_fator = [[det_inverso * elemento for elemento in linha] for linha in matriz_adjunta]
-
-    return primeiro_fator
-
+    return peso, bias
