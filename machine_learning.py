@@ -7,6 +7,7 @@ delegando primitivas estatísticas e matriciais para o módulo 'algebra.py'.
 """
 
 import algebra as alg
+import estatistica as est
 
 # Alias de conveniência para compatibilidade com os scripts de teste
 criar_matriz = alg.criar_matriz
@@ -37,9 +38,7 @@ class RegressaoLinear:
             coef_l = 0.0
             coef_a = 0.0
             for _ in range(epocas):
-                ajustes = gradient_descent(x, y, taxa_aprendizado, coef_l, coef_a)
-                coef_l = ajustes["novo_coef_linear"]
-                coef_a = ajustes["novo_coef_angular"]
+                coef_l, coef_a = gradient_descent(x, y, taxa_aprendizado, coef_l, coef_a)
             self.coef_linear = coef_l
             self.coef_angular = coef_a
         else:
@@ -73,17 +72,10 @@ class RegressaoLinearMultipla:
         X_normal = alg.transpor_matriz(X_transposta)
         
         # 1. Covariância: X^T * X
-        XtX = alg.multiplicar_matrizes(X_transposta, X_normal)
+        XtX = alg.multiplicar_matrizes(X_normal, X_transposta)
         
-        # 2. Resolução do determinante e adjunta para inversão
-        matriz_diagonal = alg.transformar_em_triangular(XtX)
-        determinante = alg.multiplicar_diagonal(matriz_diagonal)
-        
-        if determinante == 0:
-            raise ValueError("A matriz XtX não é invertível (determinante igual a zero).")
-            
-        adjunta = alg.matriz_adjunta(XtX)
-        inversa = alg.primeiro_fator(determinante, adjunta)
+        # 2. Inversão de XtX
+        inversa = alg.inverter_matriz(XtX)
         
         # 3. Produto de X^T por y
         Xt_y = alg.multiplicar_matriz_vetor(X_transposta, y)
@@ -109,16 +101,11 @@ def minimos_quadrados(x: list[float], y: list[float]) -> tuple[float, float]:
     Fórmula do Coeficiente Angular: Covariância(X, Y) / Variância(X)
     Fórmula do Coeficiente Linear: média(Y) - Coeficiente Angular * média(X)
     """
-    x_media = alg.media(x)
-    y_media = alg.media(y)
+    x_media = est.media(x)
+    y_media = est.media(y)
     
-    # Desvios em relação à média (reutilizando a média calculada)
-    x_desvios = alg.desvio(x, x_media)
-    y_desvios = alg.desvio(y, y_media)
-    
-    # Inclinação da reta
-    covariancia_xy = sum(alg.produto_vetor(x_desvios, y_desvios))
-    variancia_x = sum(alg.vetor_expoente(x_desvios, 2))
+    covariancia_xy = est.covariancia(x, y)
+    variancia_x = est.variancia(x)
     
     coef_angular = covariancia_xy / variancia_x
     coef_linear = y_media - (coef_angular * x_media)
@@ -126,9 +113,8 @@ def minimos_quadrados(x: list[float], y: list[float]) -> tuple[float, float]:
     return coef_angular, coef_linear
 
 
-def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float, coef_linear=0.0, coef_angular=0.0) -> dict[str, float]:
+def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float, coef_linear=0.0, coef_angular=0.0) -> tuple[float, float]:
     """Realiza uma única etapa do Gradiente Descendente para atualizar os pesos."""
-    tamanho_vetor = len(x)
 
     # Previsão: y = ax + b
     y_pred = realizar_previsao(x, coef_angular, coef_linear)
@@ -137,23 +123,17 @@ def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float,
     y_erro = calcular_erro(y, y_pred)
     soma_erro = sum(y_erro)
     
-    # Primitiva de produto escalar elemento a elemento
-    prod_erro_xi = alg.produto_vetor(y_erro, x)
-    soma_prod_erro_xi = sum(prod_erro_xi)
+    # Primitiva de produto escalar elemento a elemento (expressão geradora)
+    soma_prod_erro_xi = sum(err * xi for err, xi in zip(y_erro, x))
 
-    gradiente_coef_angular = (-2 / tamanho_vetor) * soma_prod_erro_xi
-    gradiente_coef_linear = (-2 / tamanho_vetor) * soma_erro
+    gradiente_coef_angular = (-2 / len(x)) * soma_prod_erro_xi
+    gradiente_coef_linear = (-2 / len(x)) * soma_erro
 
     # Atualização dos coeficientes
     novo_coef_linear = coef_linear - (taxa_de_aprendizado * gradiente_coef_linear)
     novo_coef_angular = coef_angular - (taxa_de_aprendizado * gradiente_coef_angular)
 
-    return {
-        "antigo_coef_linear": coef_linear,
-        "novo_coef_linear": novo_coef_linear,
-        "antigo_coef_angular": coef_angular,
-        "novo_coef_angular": novo_coef_angular
-    }
+    return novo_coef_linear, novo_coef_angular
 
 
 def realizar_previsao(x: list[float], coef_angular: float, coef_linear: float) -> list[float]:
@@ -172,11 +152,10 @@ def rmse(y: list[float], y_pred: list[float]) -> dict[str, float]:
     if n_y == 0:
         raise ValueError("O vetor de dados não pode estar vazio.")
 
-    y_media = alg.media(y)
+    y_media = est.media(y)
     y_erro = calcular_erro(y, y_pred)
-    y_erro_quadrado = alg.vetor_expoente(y_erro, 2)
-
-    mse = alg.media(y_erro_quadrado)
+    
+    mse = est.media([err ** 2 for err in y_erro])
     rmse_val = mse ** 0.5
     erro_percentual_medio = (rmse_val / y_media) * 100 if y_media != 0 else 0.0
 
@@ -199,18 +178,10 @@ def treinar_logistica(X: list[float], y: list[float], taxa_aprendizado: float, e
     tamanho_vetor = len(X)
     
     for _ in range(epocas):
-        soma_gradiente_peso = 0.0
-        soma_gradiente_bias = 0.0
+        erros = [alg.predizer_probabilidade(xi, peso, bias) - yi for xi, yi in zip(X, y)]
         
-        for xi, yi in zip(X, y):
-            y_predito = alg.predizer_probabilidade(xi, peso, bias)
-            erro = y_predito - yi
-            
-            soma_gradiente_peso += erro * xi
-            soma_gradiente_bias += erro
-            
-        gradiente_peso = soma_gradiente_peso / tamanho_vetor
-        gradiente_bias = soma_gradiente_bias / tamanho_vetor
+        gradiente_peso = sum(erro * xi for erro, xi in zip(erros, X)) / tamanho_vetor
+        gradiente_bias = sum(erros) / tamanho_vetor
         
         # Correção dos pesos
         peso -= taxa_aprendizado * gradiente_peso
