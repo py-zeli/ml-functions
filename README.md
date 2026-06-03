@@ -16,20 +16,22 @@ ml-functions/
 ├── README.md                          # Este guia didático e matemático
 │
 │   # 🛠️ Camada de Bibliotecas de Produção (Módulos Locais)
-├── algebra.py                         # Operações vetoriais, sigmoide e matrizes orientadas a colunas
-├── estatistica.py                     # Médias, desvios, covariância e coeficientes de correlação
-├── probabilidades.py                  # Fatoriais, distribuições Binomial, Poisson e Normal (erf)
+├── algebra.py                         # Operações vetoriais, sigmoide estável e matrizes por colunas
+├── estatistica.py                     # Médias, desvios, covariância amostral e correlações
+├── probabilidades.py                  # Binomial, Poisson e Normal (erf) do zero
 ├── machine_learning.py                # Regressão Simples (OLS, GD), Múltipla (Normal) e Logística
 │
 │   # 📓 Trilha de Aprendizado (Notebooks Jupyter)
-├── 01_explicacao_algoritmos.ipynb     # Guia didático das libs locais e plots das distribuições
-├── 02_regressao_linear_simples.ipynb  # Regressão Simples (OLS e Gradiente Descendente com plot animado)
-├── 03_regressao_linear_multipla.ipynb # Regressão Múltipla (Matrizes e Equação Normal do zero)
-├── 04_resolucao_exercicios.ipynb      # Resolução completa e passo a passo dos 7 exercícios de revisão
+├── Notebooks/
+│   ├── 01_explicacao_algoritmos.ipynb     # Guia didático das libs locais e plots das distribuições
+│   ├── 02_regressao_linear_simples.ipynb  # Regressão Simples (OLS e GD com plots)
+│   ├── 03_regressao_linear_multipla.ipynb # Regressão Múltipla (Matrizes e Equação Normal)
+│   └── 04_regressao_logistica.ipynb       # Aplicação prática da Regressão Logística e métricas do zero
 │
 │   # 🧪 Scripts Rápidos de Validação e Teste
-├── teste_regressao_simples.py         # Valida o ajuste analítico (MQO) vs. numérico (GD)
-└── teste_regressao_multipla.py        # Valida a inversão de matriz e regressão múltipla
+└── Testes/
+    ├── teste_regressao_simples.py         # Valida o ajuste analítico (MQO) vs. numérico (GD)
+    └── teste_regressao_multipla.py        # Valida a inversão de matriz e regressão múltipla
 ```
 
 ---
