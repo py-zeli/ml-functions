@@ -38,7 +38,7 @@ class RegressaoLinear:
             coef_l = 0.0
             coef_a = 0.0
             for _ in range(epocas):
-                coef_l, coef_a = gradient_descent(x, y, taxa_aprendizado, coef_l, coef_a)
+                coef_a, coef_l = gradient_descent_passo(x, y, taxa_aprendizado, coef_a, coef_l, modelo="linear")
             self.coef_linear = coef_l
             self.coef_angular = coef_a
         else:
@@ -93,6 +93,31 @@ class RegressaoLinearMultipla:
         return alg.multiplicar_matriz_vetor(X_normal, self.coeficientes)
 
 
+# --- MODELO 3: REGRESSÃO LOGÍSTICA ---
+
+class RegressaoLogistica:
+    """Modelo de Regressão Logística Binária."""
+    def __init__(self):
+        self.peso = None
+        self.bias = None
+
+    def fit(self, X: list[float], y: list[float], taxa_aprendizado=0.1, epocas=1000):
+        """Ajusta o modelo calibrando o peso e o bias via Gradiente Descendente."""
+        self.peso, self.bias = treinar_logistica(X, y, taxa_aprendizado, epocas)
+        return self
+
+    def predict_proba(self, X: list[float]) -> list[float]:
+        """Prediz a probabilidade de pertencer à classe 1 para cada amostra."""
+        if self.peso is None or self.bias is None:
+            raise RuntimeError("O modelo precisa ser treinado com .fit() antes de prever.")
+        return realizar_previsao(X, self.peso, self.bias, modelo="logistica")
+
+    def predict(self, X: list[float], limiar=0.5) -> list[int]:
+        """Classifica as amostras em 0 ou 1 com base no limiar de probabilidade."""
+        probas = self.predict_proba(X)
+        return [1 if p >= limiar else 0 for p in probas]
+
+
 # --- FUNÇÕES DE AJUSTE E CÁLCULO ---
 
 def minimos_quadrados(x: list[float], y: list[float]) -> tuple[float, float]:
@@ -113,32 +138,62 @@ def minimos_quadrados(x: list[float], y: list[float]) -> tuple[float, float]:
     return coef_angular, coef_linear
 
 
-def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float, coef_linear=0.0, coef_angular=0.0) -> tuple[float, float]:
-    """Realiza uma única etapa do Gradiente Descendente para atualizar os pesos."""
-
-    # Previsão: y = ax + b
-    y_pred = realizar_previsao(x, coef_angular, coef_linear)
-
-    # Cálculo dos erros e gradientes
-    y_erro = calcular_erro(y, y_pred)
-    soma_erro = sum(y_erro)
+def gradient_descent_passo(x: list[float], y: list[float], taxa_aprendizado: float, peso: float, bias: float, modelo="linear") -> tuple[float, float]:
+    """
+    Realiza um único passo de atualização de peso (coef_angular) e bias (coef_linear) usando Gradiente Descendente.
+    Funciona de forma unificada tanto para a Regressão Linear (MSE) quanto para a Regressão Logística (Log Loss).
     
-    # Primitiva de produto escalar elemento a elemento (expressão geradora)
-    soma_prod_erro_xi = sum(err * xi for err, xi in zip(y_erro, x))
+    Paralelo Matemático dos Modelos:
+    A descida de gradiente atualiza os parâmetros na direção oposta ao gradiente da perda:
+      peso_novo = peso - taxa_aprendizado * gradiente_peso
+      bias_novo = bias - taxa_aprendizado * gradiente_bias
+      
+    Onde a derivada da perda em relação aos parâmetros tem a mesma estrutura:
+      gradiente_bias = escala * media(y_pred - y)
+      gradiente_peso = escala * media((y_pred - y) * x)
+      
+    Convergência Matemática:
+      - Regressão Linear (Perda MSE): escala = 2, y_pred = peso * x + bias
+      - Regressão Logística (Perda Log Loss): escala = 1, y_pred = sigmoide(peso * x + bias)
+    """
+    y_pred = realizar_previsao(x, peso, bias, modelo=modelo)
+    escala = 2.0 if modelo == "linear" else 1.0
 
-    gradiente_coef_angular = (-2 / len(x)) * soma_prod_erro_xi
-    gradiente_coef_linear = (-2 / len(x)) * soma_erro
+    # Erro residual: y_pred - y
+    erro_residual = alg.subtrair_vetores(y_pred, y)
 
-    # Atualização dos coeficientes
-    novo_coef_linear = coef_linear - (taxa_de_aprendizado * gradiente_coef_linear)
-    novo_coef_angular = coef_angular - (taxa_de_aprendizado * gradiente_coef_angular)
+    # Cálculo unificado dos gradientes usando médias da biblioteca de estatística e álgebra
+    gradiente_bias = escala * est.media(erro_residual)
+    gradiente_peso = escala * est.media(alg.produto_vetor(erro_residual, x))
 
-    return novo_coef_linear, novo_coef_angular
+    # Atualização
+    novo_bias = bias - (taxa_aprendizado * gradiente_bias)
+    novo_peso = peso - (taxa_aprendizado * gradiente_peso)
+
+    return novo_peso, novo_bias
 
 
-def realizar_previsao(x: list[float], coef_angular: float, coef_linear: float) -> list[float]:
-    """Gera previsões para regressão simples: y_pred = ax + b."""
-    return [(coef_angular * xi) + coef_linear for xi in x]
+def gradient_descent(x: list[float], y: list[float], taxa_de_aprendizado: float, coef_linear=0.0, coef_angular=0.0) -> tuple[float, float]:
+    """
+    Realiza uma única etapa do Gradiente Descendente para regressão linear simples.
+    Mantido para retrocompatibilidade; delega o passo para a função unificada gradient_descent_passo.
+    """
+    novo_peso, novo_bias = gradient_descent_passo(x, y, taxa_de_aprendizado, coef_angular, coef_linear, modelo="linear")
+    return novo_bias, novo_peso
+
+
+def realizar_previsao(x: list[float], peso: float, bias: float, modelo="linear") -> list[float]:
+    """
+    Gera previsões para um vetor de entrada x dado um peso e bias.
+    - Para 'linear': y_pred = peso * x_i + bias (Regressão Linear)
+    - Para 'logistica': y_pred = sigmoide(peso * x_i + bias) (Regressão Logística)
+    """
+    if modelo == "linear":
+        return [(peso * xi) + bias for xi in x]
+    elif modelo == "logistica":
+        return [alg.sigmoide((peso * xi) + bias) for xi in x]
+    else:
+        raise ValueError("Modelo desconhecido. Escolha 'linear' ou 'logistica'.")
 
 
 def calcular_erro(y: list[float], y_pred: list[float]) -> list[float]:
@@ -155,7 +210,7 @@ def rmse(y: list[float], y_pred: list[float]) -> dict[str, float]:
     y_media = est.media(y)
     y_erro = calcular_erro(y, y_pred)
     
-    mse = est.media([err ** 2 for err in y_erro])
+    mse = est.media(alg.vetor_expoente(y_erro, 2))
     rmse_val = mse ** 0.5
     erro_percentual_medio = (rmse_val / y_media) * 100 if y_media != 0 else 0.0
 
@@ -175,16 +230,64 @@ def treinar_logistica(X: list[float], y: list[float], taxa_aprendizado: float, e
     """
     peso = 0.0
     bias = 0.0
-    tamanho_vetor = len(X)
-    
     for _ in range(epocas):
-        erros = [alg.predizer_probabilidade(xi, peso, bias) - yi for xi, yi in zip(X, y)]
-        
-        gradiente_peso = sum(erro * xi for erro, xi in zip(erros, X)) / tamanho_vetor
-        gradiente_bias = sum(erros) / tamanho_vetor
-        
-        # Correção dos pesos
-        peso -= taxa_aprendizado * gradiente_peso
-        bias -= taxa_aprendizado * gradiente_bias
+        peso, bias = gradient_descent_passo(X, y, taxa_aprendizado, peso, bias, modelo="logistica")
         
     return peso, bias
+
+
+# --- METRICAS DE AVALIAÇÃO DE CLASSIFICAÇÃO ---
+
+def matriz_confusao(y_real: list[int], y_pred: list[int]) -> dict[str, int]:
+    """
+    Calcula os elementos da matriz de confusão:
+    - Verdadeiros Positivos (VP)
+    - Verdadeiros Negativos (VN)
+    - Falsos Positivos (FP)
+    - Falsos Negativos (FN)
+    """
+    if len(y_real) != len(y_pred):
+        raise ValueError("Os vetores y_real e y_pred devem ter o mesmo tamanho.")
+        
+    vp = sum(1 for r, p in zip(y_real, y_pred) if r == 1 and p == 1)
+    vn = sum(1 for r, p in zip(y_real, y_pred) if r == 0 and p == 0)
+    fp = sum(1 for r, p in zip(y_real, y_pred) if r == 0 and p == 1)
+    fn = sum(1 for r, p in zip(y_real, y_pred) if r == 1 and p == 0)
+    
+    return {"VP": vp, "VN": vn, "FP": fp, "FN": fn}
+
+
+def acuracia(y_real: list[int], y_pred: list[int]) -> float:
+    """Calcula a acurácia (fração de previsões corretas)."""
+    mc = matriz_confusao(y_real, y_pred)
+    total = sum(mc.values())
+    if total == 0:
+        return 0.0
+    return (mc["VP"] + mc["VN"]) / total
+
+
+def precisao(y_real: list[int], y_pred: list[int]) -> float:
+    """Calcula a precisão (VP / (VP + FP))."""
+    mc = matriz_confusao(y_real, y_pred)
+    denominador = mc["VP"] + mc["FP"]
+    if denominador == 0:
+        return 0.0
+    return mc["VP"] / denominador
+
+
+def revocacao(y_real: list[int], y_pred: list[int]) -> float:
+    """Calcula a revocação/recall (VP / (VP + FN))."""
+    mc = matriz_confusao(y_real, y_pred)
+    denominador = mc["VP"] + mc["FN"]
+    if denominador == 0:
+        return 0.0
+    return mc["VP"] / denominador
+
+
+def f1_score(y_real: list[int], y_pred: list[int]) -> float:
+    """Calcula o F1-Score (média harmônica de precisão e revocação)."""
+    prec = precisao(y_real, y_pred)
+    rec = revocacao(y_real, y_pred)
+    if (prec + rec) == 0:
+        return 0.0
+    return 2 * (prec * rec) / (prec + rec)
