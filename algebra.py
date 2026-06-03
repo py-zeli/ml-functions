@@ -39,12 +39,6 @@ def sigmoide(z: float) -> float:
         return exp_z / (1 + exp_z)
 
 
-def predizer_probabilidade(x: float, peso: float, bias: float) -> float:
-    """Calcula o logit (z) e retorna a probabilidade correspondente (curva sigmoide)."""
-    z = (x * peso) + bias
-    return sigmoide(z)
-
-
 # --- OPERAÇÕES MATRICIAIS (Representação de lista de colunas) ---
 
 def criar_matriz(*args: list[float]) -> list[list[float]]:
